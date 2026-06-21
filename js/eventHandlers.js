@@ -52,12 +52,234 @@ class EventHandlers {
 
         document.querySelectorAll('.ink-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.ink-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                this.app.renderer.setOptions({ inkColor: e.target.dataset.color });
-                this.app.generatePreview();
+                if (e.target.closest('.ink-btn').classList.contains('picker-btn')) return;
+                this.setInkColor(e.target.closest('.ink-btn').dataset.color);
             });
         });
+    }
+
+    setInkColor(color) {
+        document.querySelectorAll('.ink-btn').forEach(b => {
+            if (!b.classList.contains('picker-btn')) {
+                b.classList.remove('active');
+            }
+        });
+
+        const presetBtn = document.querySelector(`.ink-btn[data-color="${color}"]:not(.picker-btn)`);
+        if (presetBtn) {
+            presetBtn.classList.add('active');
+        }
+
+        this.app.renderer.setOptions({ inkColor: color });
+        this.updateColorDisplay(color);
+        document.getElementById('customColorPicker').value = color;
+        this.app.generatePreview();
+    }
+
+    updateColorDisplay(color) {
+        document.getElementById('currentColorPreview').style.background = color;
+        document.getElementById('currentColorHex').textContent = color;
+    }
+
+    bindColorPicker() {
+        const pickerBtn = document.getElementById('colorPickerBtn');
+        const colorPicker = document.getElementById('customColorPicker');
+
+        pickerBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            colorPicker.click();
+        });
+
+        colorPicker.addEventListener('input', (e) => {
+            this.setInkColor(e.target.value);
+        });
+
+        colorPicker.addEventListener('change', (e) => {
+            this.setInkColor(e.target.value);
+        });
+    }
+
+    bindImageUpload() {
+        const imageFile = document.getElementById('imageFile');
+        const imageUploadArea = document.getElementById('imageUploadArea');
+        const imageUploadLabel = imageUploadArea.querySelector('.image-upload-label');
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const previewImg = document.getElementById('uploadedImagePreview');
+        const removeBtn = document.getElementById('removeImageBtn');
+        const extractedColors = document.getElementById('extractedColors');
+        const extractedColorList = document.getElementById('extractedColorList');
+
+        imageFile.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                this.handleImageUpload(e.target.files[0]);
+            }
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            imageUploadArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                imageUploadLabel.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            imageUploadArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                imageUploadLabel.classList.remove('dragover');
+            });
+        });
+
+        imageUploadArea.addEventListener('drop', (e) => {
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                this.handleImageUpload(file);
+            }
+        });
+
+        removeBtn.addEventListener('click', () => {
+            previewContainer.style.display = 'none';
+            extractedColors.style.display = 'none';
+            imageFile.value = '';
+            previewImg.src = '';
+            extractedColorList.innerHTML = '';
+        });
+    }
+
+    async handleImageUpload(file) {
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const previewImg = document.getElementById('uploadedImagePreview');
+        const extractedColors = document.getElementById('extractedColors');
+        const extractedColorList = document.getElementById('extractedColorList');
+
+        try {
+            const img = await ColorUtils.loadImageFromFile(file);
+            previewImg.src = img.src;
+            previewContainer.style.display = 'block';
+
+            const dominantColors = await ColorUtils.extractDominantColors(img, 6, 8);
+
+            extractedColorList.innerHTML = '';
+            dominantColors.forEach((colorInfo, index) => {
+                const isSuitable = ColorUtils.isColorSuitableForInk(colorInfo.hex);
+                const adjustedColor = isSuitable ? colorInfo.hex : ColorUtils.adjustColorForInk(colorInfo.hex);
+
+                const item = document.createElement('div');
+                item.className = 'extracted-color-item';
+                item.title = `原始: ${colorInfo.hex} (${colorInfo.percentage}%)${isSuitable ? '' : ' - 已调整为墨迹适配色'}`;
+                item.innerHTML = `
+                    <div class="extracted-color-swatch" style="background: ${adjustedColor}">
+                        <div class="extracted-color-percentage">${colorInfo.percentage}%</div>
+                    </div>
+                `;
+
+                item.addEventListener('click', () => {
+                    this.setInkColor(adjustedColor);
+                });
+
+                extractedColorList.appendChild(item);
+
+                if (index === 0) {
+                    setTimeout(() => {
+                        this.setInkColor(adjustedColor);
+                    }, 300);
+                }
+            });
+
+            extractedColors.style.display = 'block';
+
+        } catch (error) {
+            console.error('处理图片失败:', error);
+            alert('图片处理失败，请尝试其他图片');
+        }
+    }
+
+    bindSentimentAnalysis() {
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        analyzeBtn.addEventListener('click', () => {
+            this.analyzeAndRecommend();
+        });
+    }
+
+    analyzeAndRecommend() {
+        const text = document.getElementById('textInput').value;
+        const sentimentInfo = document.getElementById('sentimentInfo');
+        const recommendedColors = document.getElementById('recommendedColors');
+        const recommendTitle = document.getElementById('recommendTitle');
+        const recommendedColorList = document.getElementById('recommendedColorList');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        analyzeBtn.classList.add('analyzing');
+        analyzeBtn.textContent = '分析中...';
+
+        setTimeout(() => {
+            const sentiment = ColorUtils.analyzeSentiment(text);
+
+            let icon, labelText, description;
+            switch (sentiment.label) {
+                case 'positive':
+                    icon = '😊';
+                    labelText = '积极情感';
+                    description = '文本传达出喜悦、温暖或热情的情感倾向';
+                    break;
+                case 'negative':
+                    icon = '😢';
+                    labelText = '消极情感';
+                    description = '文本传达出忧伤、沉静或思念的情感倾向';
+                    break;
+                default:
+                    icon = '😐';
+                    labelText = '中性情感';
+                    description = '文本情感较为平稳，偏向叙事或思考';
+            }
+
+            const barWidth = Math.min(Math.abs(sentiment.score) * 100 + 30, 100);
+
+            sentimentInfo.innerHTML = `
+                <div class="sentiment-result">
+                    <div class="sentiment-icon">${icon}</div>
+                    <div class="sentiment-details">
+                        <div class="sentiment-label ${sentiment.label}">${labelText}</div>
+                        <div class="sentiment-desc">${description}</div>
+                        <div class="sentiment-stats">
+                            <span>正面词: ${sentiment.positiveCount}</span>
+                            <span>负面词: ${sentiment.negativeCount}</span>
+                            <span>置信度: ${Math.round(sentiment.confidence * 100)}%</span>
+                        </div>
+                        <div class="sentiment-bar">
+                            <div class="sentiment-bar-fill ${sentiment.label}" style="width: ${barWidth}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const recommendation = ColorUtils.getRecommendedColors(sentiment);
+            recommendTitle.textContent = `${recommendation.name} · ${recommendation.description}`;
+
+            recommendedColorList.innerHTML = '';
+            recommendation.colors.forEach(color => {
+                const item = document.createElement('div');
+                item.className = 'recommended-color-item';
+                item.innerHTML = `
+                    <div class="recommended-color-swatch" style="background: ${color.hex}"></div>
+                    <div class="recommended-color-name">${color.name}</div>
+                    <div class="recommended-color-reason">${color.reason}</div>
+                `;
+
+                item.addEventListener('click', () => {
+                    this.setInkColor(color.hex);
+                });
+
+                recommendedColorList.appendChild(item);
+            });
+
+            recommendedColors.style.display = 'block';
+
+            analyzeBtn.classList.remove('analyzing');
+            analyzeBtn.textContent = '✨ 重新分析';
+        }, 500);
     }
 
     bindParamSliders() {
@@ -264,6 +486,9 @@ class EventHandlers {
     bindAll() {
         this.bindStyleButtons();
         this.bindColorButtons();
+        this.bindColorPicker();
+        this.bindImageUpload();
+        this.bindSentimentAnalysis();
         this.bindParamSliders();
         this.bindTextInput();
         this.bindActionButtons();

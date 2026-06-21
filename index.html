@@ -105,22 +105,67 @@
                             <span>纸张颜色</span>
                         </label>
                         <div class="color-options">
-                            <button class="color-btn active" data-color="#faf8f0">米黄</button>
-                            <button class="color-btn" data-color="#ffffff">白色</button>
-                            <button class="color-btn" data-color="#f5e6d3">仿古</button>
-                            <button class="color-btn" data-color="#e8e0d0">牛皮纸</button>
+                            <button class="color-btn active" data-color="#faf8f0" title="米黄">米黄</button>
+                            <button class="color-btn" data-color="#ffffff" title="白色">白色</button>
+                            <button class="color-btn" data-color="#f5e6d3" title="仿古">仿古</button>
+                            <button class="color-btn" data-color="#e8e0d0" title="牛皮纸">牛皮纸</button>
                         </div>
                     </div>
 
                     <div class="param-group">
                         <label>
                             <span>墨迹颜色</span>
+                            <button id="analyzeBtn" class="mini-btn" type="button">✨ 智能推荐</button>
                         </label>
                         <div class="color-options">
-                            <button class="ink-btn active" data-color="#2c2c2c">墨黑</button>
-                            <button class="ink-btn" data-color="#4a3728">墨棕</button>
-                            <button class="ink-btn" data-color="#8b0000">朱红</button>
-                            <button class="ink-btn" data-color="#1e3a5f">藏青</button>
+                            <button class="ink-btn active" data-color="#2c2c2c" title="墨黑">墨黑</button>
+                            <button class="ink-btn" data-color="#4a3728" title="墨棕">墨棕</button>
+                            <button class="ink-btn" data-color="#8b0000" title="朱红">朱红</button>
+                            <button class="ink-btn" data-color="#1e3a5f" title="藏青">藏青</button>
+                            <button class="ink-btn picker-btn" id="colorPickerBtn" title="自定义颜色">
+                                <span class="picker-icon">🎨</span>
+                            </button>
+                            <input type="color" id="customColorPicker" value="#2c2c2c" style="display:none">
+                        </div>
+                        <div class="custom-color-row">
+                            <label class="custom-color-label">当前: </label>
+                            <span class="color-preview" id="currentColorPreview" style="background:#2c2c2c"></span>
+                            <span class="color-hex" id="currentColorHex">#2c2c2c</span>
+                        </div>
+                    </div>
+
+                    <div class="param-group">
+                        <label>
+                            <span>🖼️ 从图片提取主色调</span>
+                        </label>
+                        <div class="image-upload-area" id="imageUploadArea">
+                            <label for="imageFile" class="image-upload-label">
+                                <div class="upload-icon">📷</div>
+                                <div class="upload-text">点击或拖拽上传图片</div>
+                                <div class="upload-hint">自动提取主色调作为墨迹颜色</div>
+                            </label>
+                            <input type="file" id="imageFile" accept="image/*" style="display:none">
+                        </div>
+                        <div class="image-preview-container" id="imagePreviewContainer" style="display:none">
+                            <img id="uploadedImagePreview" alt="预览">
+                            <button id="removeImageBtn" class="remove-image-btn">×</button>
+                        </div>
+                        <div class="extracted-colors" id="extractedColors" style="display:none">
+                            <div class="section-hint">提取的主色调（点击使用）：</div>
+                            <div class="extracted-color-list" id="extractedColorList"></div>
+                        </div>
+                    </div>
+
+                    <div class="param-group" id="sentimentSection">
+                        <label>
+                            <span>💡 情感色彩推荐</span>
+                        </label>
+                        <div class="sentiment-info" id="sentimentInfo">
+                            <div class="sentiment-pending">点击「智能推荐」分析文本情感</div>
+                        </div>
+                        <div class="recommended-colors" id="recommendedColors" style="display:none">
+                            <div class="section-hint" id="recommendTitle"></div>
+                            <div class="recommended-color-list" id="recommendedColorList"></div>
                         </div>
                     </div>
                 </div>
@@ -184,6 +229,7 @@
 
     <script src="js/fontLoader.js"></script>
     <script src="js/styles.js"></script>
+    <script src="js/colorUtils.js"></script>
     <script src="js/paperEffects.js"></script>
     <script src="js/textEffects.js"></script>
     <script src="js/exportManager.js"></script>
